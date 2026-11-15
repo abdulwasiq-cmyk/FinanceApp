@@ -154,7 +154,16 @@ internal fun formatLedgerAudit(body: String): String {
     out.append("\nSPLITWISE shown ${money(sw.getLong("shownMinor"))}, ledger sum ${money(sw.getLong("ledgerSumMinor"))}\n")
     val m = sw.optJSONObject("manual")
     if (m != null) {
-        out.append("  baseline ${money(m.optLong("baseline_amount_minor"))} at ledger ${money(m.optLong("baseline_ledger_minor"))}, set at ${m.optLong("updated_at")}\n")
+        out.append("  baseline ${money(m.optLong("baseline_amount_minor"))} at ledger ${money(m.optLong("baseline_ledger_minor"))}, set at ${m.optLong("baseline_set_at")}, last recalculated ${m.optLong("updated_at")}\n")
+        val since = sw.optJSONObject("sinceSet")
+        if (since != null) {
+            out.append("  since set: ${money(since.optLong("changeMinor"))} total, ${money(since.optLong("otherChangeMinor"))} from edits to older rows\n")
+            val items = since.optJSONArray("items")
+            if (items != null) for (i in 0 until items.length()) {
+                val it = items.getJSONObject(i)
+                out.append("    #${it.optLong("id")} ${it.optString("type")} ${it.optString("bank")} ${it.optString("last4")} ${it.optString("category")} ${it.optString("description")} => ${money(it.optLong("deltaMinor"))}\n")
+            }
+        }
     }
     fun rowsSection(title: String, key: String) {
         out.append("\n$title\n")

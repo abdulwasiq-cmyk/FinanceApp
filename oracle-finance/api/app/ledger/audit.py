@@ -6,7 +6,12 @@ the numbers most recently, and how the Splitwise total is composed.
 """
 
 from ..db import connection
-from .splitwise import _ledger_splitwise_total, get_manual_splitwise_total, splitwise_delta
+from .splitwise import (
+    _ledger_splitwise_total,
+    get_manual_splitwise_total,
+    splitwise_changes_since_reset,
+    splitwise_delta,
+)
 
 
 def ledger_audit(recent=25):
@@ -70,7 +75,7 @@ def ledger_audit(recent=25):
         }
         sw_sum = int(_ledger_splitwise_total(conn, "INR"))
         manual = conn.execute(
-            "SELECT amount_minor, baseline_amount_minor, baseline_ledger_minor, updated_at FROM manual_splitwise_total WHERE currency='INR'"
+            "SELECT amount_minor, baseline_amount_minor, baseline_ledger_minor, baseline_set_at, updated_at FROM manual_splitwise_total WHERE currency='INR'"
         ).fetchone()
     return {
         **extra,
@@ -80,5 +85,6 @@ def ledger_audit(recent=25):
             "shownMinor": get_manual_splitwise_total("INR"),
             "ledgerSumMinor": sw_sum,
             "manual": dict(manual) if manual else None,
+            "sinceSet": splitwise_changes_since_reset("INR", limit=40),
         },
     }
