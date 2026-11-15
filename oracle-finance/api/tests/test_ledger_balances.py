@@ -612,6 +612,8 @@ def test_axis_bank_alias_and_late_transaction_update_balance():
     # Simulate a late notification: the bank event timestamp is before the
     # manual reconciliation point, but the transaction itself is discovered
     # after that reconciliation.
+    # "Discovered after" is judged in milliseconds; make sure the clock moved.
+    __import__("time").sleep(0.01)
     sync_transaction(T("axis-late-credit", "CREDIT", 1700000000000))
 
     with connection() as conn:
