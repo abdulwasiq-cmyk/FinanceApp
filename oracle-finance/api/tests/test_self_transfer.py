@@ -534,7 +534,7 @@ def test_configured_credit_roster_is_complete_and_not_duplicated():
     got = sorted((r["bank"], r["last4"]) for r in rows)
     expected = [("ICICI", x) for x in ("1012", "8001", "0005", "6002", "9001")] + [
         ("AXIS", "1175"), ("AXIS", "9206"), ("HDFC", "5304"), ("SBI", "0065"),
-        ("SBI", "7345"), ("INDUSIND", "3526"), ("HSBC", "5145")]
+        ("SBI", "7345"), ("INDUSIND", "3526")]
     assert got == sorted(expected)
 
 

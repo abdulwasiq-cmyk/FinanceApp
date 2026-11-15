@@ -12,7 +12,6 @@ _BANK_DOMAINS = {
     "AXIS": ("axisbank.com", "axis.bank.in"),
     "ICICI": ("icicibank.com", "icici.bank.in"),
     "SBI": ("sbi.co.in", "sbicard.com"),
-    "HSBC": ("hsbc.co.in", "hsbc.com"),
     "INDUSIND": ("indusind.com",),
 }
 

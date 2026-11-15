@@ -199,3 +199,30 @@ def migrate_card_bill_pdf_rederive(now_ms_value=None):
         ).rowcount
         conn.execute("INSERT INTO applied_migrations(name) VALUES('card_bill_pdf_rederive_v2')")
         return removed
+
+
+def migrate_remove_closed_card(bank, last4):
+    """One-time: drop a card the user has closed from the roster.
+
+    Only a card whose outstanding is zero is removed, together with its balance
+    adjustments and bill evidence. Transactions stay in the history untouched,
+    so Splitwise and past rows do not move. A card still owing money is left
+    in place and the removal is retried at the next start.
+    """
+    name = f"remove_closed_card:{bank}:{last4}"
+    with connection() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS applied_migrations (name TEXT PRIMARY KEY)")
+        if conn.execute("SELECT 1 FROM applied_migrations WHERE name=?", (name,)).fetchone():
+            return False
+        accounts = conn.execute(
+            "SELECT id,balance_minor FROM accounts WHERE account_type='CREDIT_CARD' AND bank=? AND TRIM(COALESCE(last4,''))=?",
+            (bank, last4),
+        ).fetchall()
+        if any(int(a["balance_minor"] or 0) != 0 for a in accounts):
+            return False
+        for account in accounts:
+            conn.execute("DELETE FROM balance_adjustments WHERE account_id=?", (account["id"],))
+            conn.execute("DELETE FROM accounts WHERE id=?", (account["id"],))
+        conn.execute("DELETE FROM card_bill_evidence WHERE bank=? AND account_last4=?", (bank, last4))
+        conn.execute("INSERT INTO applied_migrations(name) VALUES(?)", (name,))
+        return bool(accounts)

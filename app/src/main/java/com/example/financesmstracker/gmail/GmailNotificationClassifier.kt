@@ -22,8 +22,6 @@ object GmailNotificationClassifier {
         "sbi card",
         "onlinesbicard@sbicard.com",
         "paynet@billdesk.in",
-        "hsbc",
-        "mail.hsbc.co.in",
         "indusind"
     )
 

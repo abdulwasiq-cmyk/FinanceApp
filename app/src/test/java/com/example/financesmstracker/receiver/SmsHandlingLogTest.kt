@@ -26,10 +26,10 @@ class SmsHandlingLogTest {
     fun gmailScanFormatShowsSearchSummaryAndEachMessage() {
         val text = SmsHandlingLog.formatGmailScan(
             "folder=INBOX, candidates=2",
-            listOf("hsbc@hsbc.bank.in | HSBC alert\n→ Read as DEBIT 4.00 USD", "x | y\n→ Skipped")
+            listOf("alerts@bank.example | Card alert\n→ Read as DEBIT 4.00 USD", "x | y\n→ Skipped")
         )
         assertTrue(text.startsWith("Search: folder=INBOX, candidates=2"))
-        assertTrue(text.contains("HSBC alert"))
+        assertTrue(text.contains("Card alert"))
         assertTrue(text.contains("→ Skipped"))
         assertEquals(
             "The scan returned no e-mails to look at.",

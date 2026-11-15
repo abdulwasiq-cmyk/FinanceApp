@@ -344,3 +344,37 @@ def test_changes_report_is_empty_when_the_total_was_never_set(tmp_path, monkeypa
     monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "chg3.db"))
     db.init_db()
     assert L.splitwise_changes_since_reset("INR")["setAt"] is None
+
+
+def test_a_closed_card_with_nothing_owed_is_removed_but_its_history_stays(tmp_path, monkeypatch):
+    from app.db import connection
+    from app.ledger import migrations
+    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "closed.db"))
+    db.init_db()
+    L.set_balance("old", "Old Card", "INR", "CREDIT_CARD", "ACME", "5145", 0)
+    L.set_manual_splitwise_total("INR", 0)
+    from tests.test_self_transfer import Tx
+    L.sync_transaction(Tx(id="old:spend", amountMinor=36_654, type="DEBIT", bank="ACME", accountLast4="5145",
+                          accountType="CREDIT_CARD", paymentMethod="CARD", reference=None, timestamp=1_800_000_000_000))
+    with connection() as conn:
+        conn.execute("UPDATE accounts SET balance_minor=0 WHERE last4='5145'")
+    L.rebuild_manual_splitwise_total()
+    before = L.get_manual_splitwise_total("INR")
+    assert migrations.migrate_remove_closed_card("ACME", "5145") is True
+    with connection() as conn:
+        assert conn.execute("SELECT COUNT(*) c FROM accounts WHERE last4='5145' AND account_type='CREDIT_CARD'").fetchone()["c"] == 0
+        assert conn.execute("SELECT COUNT(*) c FROM transactions WHERE id='old:spend'").fetchone()["c"] == 1
+    L.rebuild_manual_splitwise_total()
+    assert L.get_manual_splitwise_total("INR") == before
+    assert migrations.migrate_remove_closed_card("ACME", "5145") is False
+
+
+def test_a_closed_card_that_still_owes_money_is_kept(tmp_path, monkeypatch):
+    from app.db import connection
+    from app.ledger import migrations
+    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "owing.db"))
+    db.init_db()
+    L.set_balance("old", "Old Card", "INR", "CREDIT_CARD", "ACME", "5145", 50_000)
+    assert migrations.migrate_remove_closed_card("ACME", "5145") is False
+    with connection() as conn:
+        assert conn.execute("SELECT COUNT(*) c FROM accounts WHERE last4='5145'").fetchone()["c"] == 1

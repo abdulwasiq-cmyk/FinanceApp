@@ -73,7 +73,6 @@ object CardBillPaymentNotificationParser {
             "hdfc" -> "HDFC"
             "icici" -> "ICICI"
             "indusind" -> "INDUSIND"
-            "hsbc" -> "HSBC"
             "kotak" -> "KOTAK"
             "amex", "american express" -> "AMEX"
             else -> null

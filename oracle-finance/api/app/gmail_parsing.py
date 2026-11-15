@@ -64,7 +64,6 @@ _BANK_SENDER_DOMAINS = {
     "AXIS": ("axisbank.com", "axis.bank.in"),
     "ICICI": ("icicibank.com", "icici.bank.in"),
     "SBI": ("sbi.co.in", "sbi.bank.in", "sbicard.com"),
-    "HSBC": ("hsbc.co.in", "hsbc.com", "hsbc.bank.in"),
     "INDUSIND": ("indusind.com", "indusind.bank.in"),
 }
 
@@ -113,7 +112,6 @@ def _recognized_bank(combined, sender=""):
         ("HDFC", r"(?i)HDFC"),
         ("AXIS", r"(?i)Axis Bank|\bAxis\b"),
         ("ICICI", r"(?i)ICICI"),
-        ("HSBC", r"(?i)HSBC"),
         ("INDUSIND", r"(?i)IndusInd|IndusInd Bank"),
         ("SBI", r"(?i)State Bank of India|\bSBI\b"),
     ):
@@ -266,7 +264,7 @@ def _merchant_or_payee(combined):
         value = transfer_match.group(1).strip(" \t\r\n.,;:-")
         return value or None
 
-    # Card alerts such as HSBC's "...used for a transaction of USD 4.00 at
+    # Card alerts such as "...used for a transaction of USD 4.00 at
     # HUGGINGFACE on 21/10/26." name the merchant after "at".
     card_merchant = re.search(
         r"(?i)\b(?:transaction|purchase|spend|payment)\s+of\s+"

@@ -115,7 +115,7 @@ def connection():
         conn.close()
 
 def _card_bank_label(bank):
-    return {"ICICI": "ICICI", "SBI": "SBI", "HDFC": "HDFC", "HSBC": "HSBC",
+    return {"ICICI": "ICICI", "SBI": "SBI", "HDFC": "HDFC",
             "INDUSIND": "IndusInd"}.get(bank, bank.title())
 
 def init_db():
@@ -238,7 +238,7 @@ def init_db():
         ]
         for bank, last4 in (
             ("ICICI", "1012"), ("ICICI", "0005"), ("ICICI", "6002"), ("ICICI", "9001"),
-            ("SBI", "0065"), ("INDUSIND", "3526"), ("HSBC", "5145"),
+            ("SBI", "0065"), ("INDUSIND", "3526"),
         ):
             configured_cards.append((
                 f"{bank.lower()}-card-{last4}", f"{_card_bank_label(bank)} Credit Card",

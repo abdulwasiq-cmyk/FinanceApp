@@ -147,7 +147,6 @@ object GmailNotificationParser {
             Regex("""\bicici(?:\s+bank)?\b""").containsMatchIn(issuerText) -> "ICICI"
             Regex("""\bsbi(?:\s+card|\s+bank)?\b""").containsMatchIn(issuerText) -> "SBI"
             Regex("""\bindusind(?:\s+bank)?\b""").containsMatchIn(issuerText) -> "INDUSIND"
-            Regex("""\bhsbc(?:\s+bank)?\b""").containsMatchIn(issuerText) -> "HSBC"
             else -> null
         }
 

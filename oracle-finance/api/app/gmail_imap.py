@@ -394,11 +394,6 @@ class IMAPService:
             # SBI Card / BillDesk.
             "onlinesbicard@sbicard.com",
             "paynet@billdesk.in",
-            # HSBC.
-            "hsbc@mail.hsbc.co.in",
-            "alerts@mail.hsbc.co.in",
-            # HSBC India now sends card alerts from its .bank.in domain.
-            "hsbc@hsbc.bank.in",
             # IndusInd.
             "transactionalert@indusind.com",
             "indusind_bank@indusind.com",
@@ -413,9 +408,6 @@ class IMAPService:
             "icici.bank.in",
             "sbi.co.in",
             "sbicard.com",
-            "hsbc.co.in",
-            "hsbc.com",
-            "hsbc.bank.in",
             "indusind.com",
             "indusind.bank.in",
             "sbi.bank.in",

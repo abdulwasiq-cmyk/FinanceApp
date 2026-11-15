@@ -26,7 +26,6 @@ object CardBillNotificationParser {
         "ICICI" to Regex("""(?i)\bICICI(?:\s+Bank)?\b"""),
         "SBI" to Regex("""(?i)\bSBI(?:\s+Card|\s+Bank)?\b"""),
         "INDUSIND" to Regex("""(?i)\bIndusInd(?:\s+Bank)?\b"""),
-        "HSBC" to Regex("""(?i)\bHSBC(?:\s+Bank)?\b"""),
         "KOTAK" to Regex("""(?i)\bKotak(?:\s+Bank)?\b""")
     )
 

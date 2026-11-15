@@ -20,7 +20,7 @@ object SenderTrustManager {
         "icicib", "icicit", "axisbk", "axisbn", "kotakb", "kotak",
         "pnbsms", "pnbbnk", "bobtxn", "bobibn", "canbnk", "cbssbi",
         "unionb", "ubinet", "idfcfb", "yesbnk", "indusb", "aubank",
-        "rblbnk", "fedbnk", "citibk", "hsbcin", "scbank", "idbibk",
+        "rblbnk", "fedbnk", "citibk", "scbank", "idbibk",
         "bankin", "cbinbk", "iobchn", "ucobnk", "psbbnk", "dcbbnk",
         "equtas", "esafbk", "jkbank", "karbnk", "kvbank", "tmbank",
         "amexin", "onecrd", "slcebk"

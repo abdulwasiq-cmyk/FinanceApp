@@ -24,7 +24,7 @@ object CardBillPaymentSmsParser {
     )
 
     private val cardWithBankRegex = Regex(
-        """(?i)\b(SBI|AXIS|HDFC|ICICI|INDUSIND|HSBC|KOTAK)(?:\s+BANK)?\s+(?:CREDIT\s+CARD|CARD)\b[^.0-9₹]{0,40}?(?:NO\.?|NUMBER|ENDING(?:\s+IN)?|XX+|X{2,}|\*{2,})?\s*[- ]?([0-9]{2,4})\b"""
+        """(?i)\b(SBI|AXIS|HDFC|ICICI|INDUSIND|KOTAK)(?:\s+BANK)?\s+(?:CREDIT\s+CARD|CARD)\b[^.0-9₹]{0,40}?(?:NO\.?|NUMBER|ENDING(?:\s+IN)?|XX+|X{2,}|\*{2,})?\s*[- ]?([0-9]{2,4})\b"""
     )
 
     private val cardSuffixRegex = Regex(
@@ -37,7 +37,6 @@ object CardBillPaymentSmsParser {
         "ICICI" to Regex("""(?i)\bICICI(?:\s+Bank)?\b"""),
         "SBI" to Regex("""(?i)\bSBI(?:\s+Card|\s+Bank)?\b"""),
         "INDUSIND" to Regex("""(?i)\bIndusInd(?:\s+Bank)?\b"""),
-        "HSBC" to Regex("""(?i)\bHSBC(?:\s+Bank)?\b"""),
         "KOTAK" to Regex("""(?i)\bKotak(?:\s+Bank)?\b""")
     )
 
@@ -100,7 +99,6 @@ object CardBillPaymentSmsParser {
             "hdfc" -> "HDFC"
             "icici" -> "ICICI"
             "indusind" -> "INDUSIND"
-            "hsbc" -> "HSBC"
             "kotak" -> "KOTAK"
             else -> null
         }

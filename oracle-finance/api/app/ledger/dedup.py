@@ -21,7 +21,6 @@ def _merchant_values_compatible(first, second):
         "ICICI BANK",
         "SBI BANK",
         "STATE BANK OF INDIA",
-        "HSBC BANK",
         "INDUSIND BANK",
     }
     if a in generic_merchant_labels or b in generic_merchant_labels:
