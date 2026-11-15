@@ -455,9 +455,9 @@ def _blocked_bill_result(conn, account, bill, bank, source_type, source_key, amo
 
     A bill payment locks the bill: a statement observed on or before the
     payment is the one that was paid, so re-reading it must not override the
-    paid-down bill; a newer statement still applies. A manual Cards edit does
-    not lock: the next statement scan within the window puts the printed bill
-    back. Otherwise a weaker source cannot overwrite a stronger one, and two
+    paid-down bill; a newer statement still applies. Changing the bill by hand
+    locks it the same way, so a re-read of the statement already on file does
+    not put a paid bill back. Otherwise a weaker source cannot overwrite a stronger one, and two
     equally strong sources that disagree go to Review.
     """
     locked_at = int(account["bill_locked_at"] or 0)
@@ -660,9 +660,19 @@ def set_balance(account_id,name,currency,account_type,bank,last4,balance_minor,b
         # not retroactively change this manually verified balance.
         opening_balance=balance_minor-adjustment_total
         reconciled_at=now_ms()
+        # Changing the bill by hand is a statement about the bill as of now: a
+        # re-read of the statement already on file must not put the old amount
+        # back (a paid bill came back this way). A newer statement still applies.
+        bill_changed = (
+            account_type == "CREDIT_CARD"
+            and bill_balance_minor is not None
+            and (existing is None or existing["bill_balance_minor"] is None
+                 or int(existing["bill_balance_minor"]) != bill_value)
+        )
+        bill_locked_at = reconciled_at if bill_changed else 0
         conn.execute("""INSERT INTO accounts(
-            id,name,currency,account_type,bank,last4,opening_balance_minor,balance_minor,bill_balance_minor,balance_reconciled_at,updated_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+            id,name,currency,account_type,bank,last4,opening_balance_minor,balance_minor,bill_balance_minor,balance_reconciled_at,updated_at,bill_locked_at
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
             name=excluded.name,
             currency=excluded.currency,
@@ -673,8 +683,9 @@ def set_balance(account_id,name,currency,account_type,bank,last4,balance_minor,b
             balance_minor=excluded.balance_minor,
             bill_balance_minor=excluded.bill_balance_minor,
             balance_reconciled_at=excluded.balance_reconciled_at,
-            updated_at=excluded.updated_at""",
-        (account_id,name,currency,account_type,bank,last4,opening_balance,balance_minor,bill_value,reconciled_at,reconciled_at))
+            updated_at=excluded.updated_at,
+            bill_locked_at=MAX(COALESCE(accounts.bill_locked_at,0), excluded.bill_locked_at)""",
+        (account_id,name,currency,account_type,bank,last4,opening_balance,balance_minor,bill_value,reconciled_at,reconciled_at,bill_locked_at))
 
 
 def add_receivable(item):

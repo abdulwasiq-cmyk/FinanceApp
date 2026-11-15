@@ -558,18 +558,21 @@ def test_manual_reconciliation_blocks_late_historical_transactions_but_allows_ne
     assert row["balance_minor"] == 98500
 
 
-def test_statement_scan_overrides_a_manual_card_bill_unless_a_payment_locked_it():
+def test_a_manual_card_bill_is_kept_against_older_statements_but_a_newer_one_applies():
+    import time
     from app.ledger import sync_card_bill
 
     set_balance("reconciliation-card", "Reconciliation Card", "INR", "CREDIT_CARD", "AXIS", "3434", 50000, 30000)
 
-    result = sync_card_bill({
-        "sourceType": "GMAIL_STATEMENT_PDF", "sourceKey": "historical-statement",
-        "timestamp": 1_000, "amountMinor": 42000, "currency": "INR",
-        "bank": "AXIS", "accountLast4": "3434", "confidence": 0.99,
-    })
+    def statement(key, observed, amount):
+        return sync_card_bill({
+            "sourceType": "GMAIL_STATEMENT_PDF", "sourceKey": key,
+            "timestamp": observed, "amountMinor": amount, "currency": "INR",
+            "bank": "AXIS", "accountLast4": "3434", "confidence": 0.99,
+        })
 
-    assert result["status"] == "APPLIED"
+    assert statement("historical-statement", 1_000, 42000)["status"] == "RETAINED_BILL_LOCKED"
+    assert statement("next-statement", int(time.time() * 1000) + 1000, 42000)["status"] == "APPLIED"
     with connection() as conn:
         row = conn.execute(
             "SELECT balance_minor, bill_balance_minor FROM accounts WHERE id='reconciliation-card'"

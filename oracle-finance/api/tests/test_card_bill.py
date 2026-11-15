@@ -125,13 +125,36 @@ def test_the_statement_pdf_beats_the_email_body_for_the_same_statement():
     assert _bill_balance() == 208800
 
 
-def test_a_rescan_overrides_a_manually_typed_bill():
+def _past():
+    import time
+    return int(time.time() * 1000) - 5 * DAY
+
+
+def test_a_manually_changed_bill_is_not_put_back_by_a_rescan_of_the_same_statement():
     _card()
-    _bill("att", 208800, observed=T0)
+    seen = _past()
+    _bill("att", 208800, observed=seen)
     set_balance("c1012", "ICICI Credit Card", "INR", "CREDIT_CARD", "ICICI", "1012", 300000, 5000)
     assert _bill_balance() == 5000
-    assert _bill("att", 208800, observed=T0)["status"] == "APPLIED"
-    assert _bill_balance() == 208800
+    assert _bill("att", 208800, observed=seen)["status"] == "RETAINED_BILL_LOCKED"
+    assert _bill_balance() == 5000
+
+
+def test_a_newer_statement_still_applies_after_a_manual_bill_change():
+    import time
+    _card()
+    _bill("att", 208800, observed=_past())
+    set_balance("c1012", "ICICI Credit Card", "INR", "CREDIT_CARD", "ICICI", "1012", 300000, 5000)
+    assert _bill("next", 7000, observed=int(time.time() * 1000) + 1000)["status"] == "APPLIED"
+    assert _bill_balance() == 7000
+
+
+def test_saving_the_cards_dialog_without_changing_a_bill_does_not_lock_it():
+    _card()
+    seen = _past()
+    _bill("att", 208800, observed=seen)
+    set_balance("c1012", "ICICI Credit Card", "INR", "CREDIT_CARD", "ICICI", "1012", 300000, 208800)
+    assert _bill("att", 208800, observed=seen)["status"] != "RETAINED_BILL_LOCKED"
 
 
 def test_a_bill_larger_than_the_tracked_outstanding_raises_it_so_active_spend_is_zero():
