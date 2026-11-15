@@ -33,4 +33,12 @@ class SplitwiseChangesTextTest {
         assertTrue(text.contains("No new transactions since then."))
         assertTrue(text.contains("−₹70 from edits to older rows"))
     }
+
+    @Test
+    fun namesTheOlderRowThatChanged() {
+        val edit = SplitwiseChangeEdit(0, "MOHD SUFI", "AXIS", "OTHER", 0, -85_000)
+        val changes = SplitwiseChanges(1, 100, -85_000, -85_000, emptyList(), listOf(edit))
+        val text = SplitwiseChangesText.format(changes, money, date)
+        assertTrue(text.contains("13 Nov  MOHD SUFI (OTHER)  was +₹0, now −₹850"))
+    }
 }

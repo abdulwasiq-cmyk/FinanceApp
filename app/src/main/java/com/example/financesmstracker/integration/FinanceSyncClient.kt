@@ -115,6 +115,19 @@ class FinanceSyncClient(
                         amountMinor = item.getLong("amountMinor"),
                         deltaMinor = item.getLong("deltaMinor")
                     )
+                },
+                edits = json.optJSONArray("edits").let { edits ->
+                    (0 until (edits?.length() ?: 0)).map { i ->
+                        val e = edits!!.getJSONObject(i)
+                        SplitwiseChangeEdit(
+                            timestamp = e.getLong("timestamp"),
+                            description = cleanRemoteString(e.optString("description")),
+                            bank = e.optString("bank"),
+                            category = e.optString("category"),
+                            wasMinor = e.optLong("wasDeltaMinor", 0),
+                            deltaMinor = e.getLong("deltaMinor")
+                        )
+                    }
                 }
             )
         }
@@ -471,12 +484,23 @@ data class SplitwiseChangeItem(
     val deltaMinor: Long
 )
 
+/** An older row whose effect on Splitwise changed after the total was set. */
+data class SplitwiseChangeEdit(
+    val timestamp: Long,
+    val description: String?,
+    val bank: String,
+    val category: String,
+    val wasMinor: Long,
+    val deltaMinor: Long
+)
+
 data class SplitwiseChanges(
     val setAt: Long?,
     val baselineMinor: Long?,
     val changeMinor: Long,
     val otherChangeMinor: Long,
-    val items: List<SplitwiseChangeItem>
+    val items: List<SplitwiseChangeItem>,
+    val edits: List<SplitwiseChangeEdit> = emptyList()
 )
 
 /** A loan EMI the bank will auto-debit soon; already taken out of "true available". */

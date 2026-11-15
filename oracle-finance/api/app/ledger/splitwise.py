@@ -52,7 +52,14 @@ def set_manual_splitwise_total(currency, amount_minor):
     with connection() as conn:
         # Record the ledger-wide sum at this moment so later rebuilds only add
         # what changes after the user's reset.
-        ledger = _ledger_splitwise_total(conn, currency)
+        entries = list(_ledger_splitwise_entries(conn, currency))
+        ledger = sum(delta for _r, delta in entries)
+        # Remember each row's effect so later edits to old rows can be named.
+        conn.execute("DELETE FROM splitwise_baseline_rows WHERE currency=?", (currency,))
+        conn.executemany(
+            "INSERT OR REPLACE INTO splitwise_baseline_rows(currency,transaction_id,delta_minor) VALUES(?,?,?)",
+            [(currency, str(r["id"]), delta) for r, delta in entries if delta],
+        )
         conn.execute(
             """INSERT INTO manual_splitwise_total
                    (currency, amount_minor, updated_at, baseline_amount_minor, baseline_ledger_minor, baseline_set_at)
@@ -186,23 +193,53 @@ def splitwise_changes_since_reset(currency="INR", limit=100):
         set_at = int(row["baseline_set_at"])
         entries = list(_ledger_splitwise_entries(conn, currency))
         change = sum(delta for _r, delta in entries) - int(row["baseline_ledger_minor"])
-        items = [
-            {
+        snapshot = {
+            r["transaction_id"]: int(r["delta_minor"])
+            for r in conn.execute(
+                "SELECT transaction_id,delta_minor FROM splitwise_baseline_rows WHERE currency=?", (currency,)
+            ).fetchall()
+        }
+
+        def shape(r, delta, old=None):
+            return {
                 "id": r["id"], "timestamp": int(r["timestamp"]), "createdAt": int(r["created_at"] or 0),
                 "description": r["merchant_or_payee"], "type": r["type"], "accountType": r["account_type"],
                 "bank": r["bank"], "last4": r["account_last4"], "category": r["category"],
-                "amountMinor": int(r["amount_minor"]), "deltaMinor": delta,
+                "amountMinor": int(r["amount_minor"]), "deltaMinor": delta, "wasDeltaMinor": old,
             }
-            for r, delta in entries
-            if delta and int(r["created_at"] or 0) >= set_at
-        ]
+
+        if snapshot:
+            # Exact comparison with the rows as they were when the total was set.
+            items = [shape(r, delta) for r, delta in entries if delta and r["id"] not in snapshot]
+            edits = [
+                shape(r, delta - snapshot.get(str(r["id"]), 0), snapshot.get(str(r["id"]), 0))
+                for r, delta in entries
+                if str(r["id"]) in snapshot and delta != snapshot[str(r["id"])]
+            ]
+            current = {str(r["id"]) for r, _d in entries}
+            for tid, old in snapshot.items():
+                if tid in current:
+                    continue
+                gone = conn.execute(
+                    """SELECT id,timestamp,created_at,merchant_or_payee,type,account_type,bank,account_last4,
+                              category,amount_minor FROM transactions WHERE id=?""", (tid,)
+                ).fetchone()
+                if gone is not None:
+                    edits.append(shape(gone, -old, old))
+        else:
+            # Total was set before snapshots existed: fall back to creation time.
+            items = [shape(r, delta) for r, delta in entries if delta and int(r["created_at"] or 0) >= set_at]
+            edits = []
         items.sort(key=lambda item: item["createdAt"], reverse=True)
+        edits.sort(key=lambda item: abs(item["deltaMinor"]), reverse=True)
         listed = sum(item["deltaMinor"] for item in items)
         return {
             "setAt": set_at,
             "baselineMinor": int(row["baseline_amount_minor"]),
             "changeMinor": change,
             "otherChangeMinor": change - listed,
+            "exact": bool(snapshot),
+            "edits": edits[:40],
             "items": items[:limit],
         }
 

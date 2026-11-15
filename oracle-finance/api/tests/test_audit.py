@@ -338,6 +338,8 @@ def test_an_edit_to_an_older_row_shows_up_as_other_change(tmp_path, monkeypatch)
     L.rebuild_manual_splitwise_total()
     out = L.splitwise_changes_since_reset("INR")
     assert out["items"] == [] and out["changeMinor"] == -70_000 and out["otherChangeMinor"] == -70_000
+    assert out["exact"] is True
+    assert [(e["id"], e["wasDeltaMinor"], e["deltaMinor"]) for e in out["edits"]] == [("sms:old", 70_000, -70_000)]
 
 
 def test_changes_report_is_empty_when_the_total_was_never_set(tmp_path, monkeypatch):

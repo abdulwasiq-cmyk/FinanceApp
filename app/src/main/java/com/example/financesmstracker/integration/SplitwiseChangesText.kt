@@ -22,6 +22,10 @@ object SplitwiseChangesText {
         if (changes.otherChangeMinor != 0L) {
             lines += ""
             lines += "${signed(changes.otherChangeMinor, money)} from edits to older rows (a category changed or a duplicate merged)"
+            changes.edits.forEach { e ->
+                val name = e.description?.takeIf { it.isNotBlank() } ?: e.bank
+                lines += "${date(e.timestamp)}  $name (${e.category})  was ${signed(e.wasMinor, money)}, now ${signed(e.wasMinor + e.deltaMinor, money)}"
+            }
         }
         return lines.joinToString("\n")
     }
