@@ -8,7 +8,7 @@ from ..db import connection
 from ..ledger import apply_transaction_to_account, sync_card_bill, sync_evidence, sync_transaction
 from ..main_models import SyncEvidenceModel, SyncTransactionModel
 from .axis import parse_axis_statement
-from .common import _attachment_bytes, _extract_statement_bill_amount, _headers, _pdf_attachments, _statement_bank, _statement_keys
+from .common import _attachment_bytes, _headers, _pdf_attachments, _statement_bank, _statement_bill_amount, _statement_keys
 from .hdfc import parse_hdfc_statement
 from .icici import parse_icici_statement
 from .indusind import parse_indusind_statement
@@ -98,7 +98,7 @@ def _refresh_card_bill_from_parsed_pdf(bank, pdf_bytes, attachment_id, message):
             metadata, _rows = _parse_statement_pdf(bank, pdf_bytes, key)
             if metadata.get("account_type") != "CREDIT_CARD":
                 return
-            amount = _extract_statement_bill_amount(common._pdf_text(pdf_bytes, key))
+            amount = _statement_bill_amount(pdf_bytes, key)
             if amount is None:
                 return
             sync_card_bill({
@@ -124,7 +124,7 @@ def _card_statement_fallback(bank, pdf_bytes, keys):
             text = common._pdf_text(pdf_bytes, key)
         except Exception:
             continue
-        if _extract_statement_bill_amount(text) is None:
+        if _statement_bill_amount(pdf_bytes, key, text) is None:
             continue
         card = re.search(
             r"(?<![A-Za-z0-9])(?:(?:X{2,}|\*{2,}|[•·]{2,})[\s-]*){1,4}(\d{2,4})(?![0-9])", text
@@ -187,7 +187,7 @@ def _sync_statement_bill(metadata, pdf_bytes, key, attachment_id, message):
     """The statement PDF is the strongest bill source when the e-mail body omits
     the total. The transaction parser and bill parser are intentionally
     separate: the printed Total Amount Due must never become a fake purchase."""
-    bill_amount = _extract_statement_bill_amount(common._pdf_text(pdf_bytes, key))
+    bill_amount = _statement_bill_amount(pdf_bytes, key)
     if bill_amount is None:
         return
     sync_card_bill({

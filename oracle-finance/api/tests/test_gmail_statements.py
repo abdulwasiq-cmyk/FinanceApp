@@ -441,3 +441,67 @@ def test_pending_statement_retry_reads_the_bill_from_the_email_body_when_the_pdf
         ).fetchone()[0]
     assert bill == 208800
     assert stats["statementErrors"] == ["ICICI statement password is not configured"]
+
+
+def _word(text, x0, top, width=30):
+    return {"text": text, "x0": x0, "x1": x0 + width, "top": top, "bottom": top + 10}
+
+
+def test_bill_is_read_from_the_value_printed_under_the_label():
+    from app.statement_sync.common import _amount_below_label
+
+    words = [
+        _word("Total", 470, 234), _word("Amount", 492, 234), _word("Due", 524, 234),
+        _word("1,250.00", 491, 252), _word("DR", 525, 252, 12),
+        _word("Minimum", 462, 280), _word("Amount", 500, 280), _word("Due", 533, 280), _word("100.00", 498, 298),
+        _word("9,999.00", 100, 252),  # same row, but another column
+    ]
+    assert _amount_below_label(words) == 125000
+
+
+def test_a_credit_balance_under_the_label_means_nothing_is_due():
+    from app.statement_sync.common import _amount_below_label
+
+    words = [
+        _word("Total", 470, 234), _word("Amount", 492, 234), _word("Due", 524, 234),
+        _word("44.00", 491, 252), _word("CR", 525, 252, 12),
+    ]
+    assert _amount_below_label(words) is None
+
+
+def test_a_value_far_below_the_label_is_not_its_bill():
+    from app.statement_sync.common import _amount_below_label
+
+    words = [_word("Total", 470, 234), _word("Amount", 492, 234), _word("Due", 524, 234), _word("77.00", 491, 400)]
+    assert _amount_below_label(words) is None
+
+
+def test_the_bill_falls_back_to_word_positions_when_no_text_pattern_fits(monkeypatch):
+    from app.statement_sync import common
+
+    text = "Total Amount Due\nPROMO Effective 15th Jun there will be changes 2026 and more"
+    monkeypatch.setattr(common, "_pdf_text", lambda pdf, key: text)
+    monkeypatch.setattr(common, "_pdf_words", lambda pdf, key: [
+        _word("Total", 470, 234), _word("Amount", 492, 234), _word("Due", 524, 234), _word("407.00", 491, 252),
+    ])
+    assert common._statement_bill_amount(b"x", "k") == 40700
+
+
+def test_indusind_table_header_without_spaces_is_still_found():
+    from app.statement_sync import common, indusind
+
+    text = (
+        "INDUSIND BANK LEGEND CREDIT CARD STATEMENT\n"
+        "Date TransactionDetails MerchantCategory Amount(in )\n"
+        "Purchases & Cash Transactions for A PERSON (Credit Card No. 4147XXXXXXXX3526)\n"
+        "18/09/2026 SOME SHOP MUMBAI IN CINEMA 4 407.38 DR\n"
+        "Total 4 407.38\n"
+    )
+    original = common._pdf_text
+    common._pdf_text = lambda pdf, key: text
+    try:
+        metadata, rows = indusind.parse_indusind_statement(b"x", "k")
+    finally:
+        common._pdf_text = original
+    assert metadata["account_last4"] == "3526"
+    assert [(r["type"], r["amount_minor"]) for r in rows] == [("DEBIT", 40738)]

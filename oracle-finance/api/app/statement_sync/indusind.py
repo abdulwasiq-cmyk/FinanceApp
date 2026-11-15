@@ -26,11 +26,12 @@ def parse_indusind_statement(pdf_bytes, key):
     text = common._pdf_text(pdf_bytes, key)
     metadata = _indusind_card_metadata(text)
 
-    table_start = text.find("Date TransactionDetails Merchant Category Reward")
-    if table_start < 0:
-        table_start = text.find("Date Transaction Details Merchant Category Reward")
-    if table_start < 0:
+    # The header's spacing differs between statement versions ("TransactionDetails
+    # MerchantCategory" vs "Transaction Details Merchant Category").
+    header = re.search(r"(?i)Date\s+Transaction\s*Details\s+Merchant\s*Category", text)
+    if not header:
         raise ValueError("IndusInd transaction table not found")
+    table_start = header.start()
 
     table = text[table_start:]
     stop = len(table)

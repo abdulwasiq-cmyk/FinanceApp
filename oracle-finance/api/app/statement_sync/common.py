@@ -163,3 +163,63 @@ def _extract_statement_bill_amount(text):
         if match:
             return _minor(match.group(1))
     return None
+
+
+_AMOUNT_WORD = re.compile(r"^[0-9][0-9,]*\.[0-9]{2}$")
+
+
+def _amount_below_label(words, label=("total", "amount", "due")):
+    """Bill amount printed under a "Total Amount Due" label, from positioned words.
+
+    Some statements (IndusInd) lay the label and its value out as a column in a
+    side panel, so the text extractor runs the label into unrelated paragraphs
+    and no text pattern can pair them. The value is the nearest amount below the
+    label's words, in the same column; a trailing Dr/Cr says whether money is owed.
+    """
+    n = len(label)
+    for i in range(len(words) - n + 1):
+        run = words[i:i + n]
+        if [str(w["text"]).strip().lower() for w in run] != list(label):
+            continue
+        if max(float(w["top"]) for w in run) - min(float(w["top"]) for w in run) > 3:
+            continue
+        left, right = min(float(w["x0"]) for w in run), max(float(w["x1"]) for w in run)
+        bottom = max(float(w["bottom"]) for w in run)
+        below = [
+            w for w in words
+            if _AMOUNT_WORD.match(str(w["text"]).strip())
+            and 0 <= float(w["top"]) - bottom <= 40
+            and left - 30 <= (float(w["x0"]) + float(w["x1"])) / 2 <= right + 30
+        ]
+        if not below:
+            continue
+        value = min(below, key=lambda w: float(w["top"]))
+        suffix = [
+            w for w in words
+            if abs(float(w["top"]) - float(value["top"])) <= 3
+            and 0 <= float(w["x0"]) - float(value["x1"]) <= 12
+            and str(w["text"]).strip().upper() in ("DR", "CR", "DR.", "CR.")
+        ]
+        if suffix and str(suffix[0]["text"]).strip().upper().startswith("CR"):
+            return None
+        return _minor(str(value["text"]).strip())
+    return None
+
+
+def _pdf_words(pdf_bytes, key):
+    import pdfplumber
+
+    with pdfplumber.open(io.BytesIO(pdf_bytes), password=key) as pdf:
+        return [word for page in pdf.pages[:2] for word in page.extract_words()]
+
+
+def _statement_bill_amount(pdf_bytes, key, text=None):
+    """Printed total due: from the text when a pattern fits, else from word positions."""
+    text = _pdf_text(pdf_bytes, key) if text is None else text
+    amount = _extract_statement_bill_amount(text)
+    if amount is not None:
+        return amount
+    try:
+        return _amount_below_label(_pdf_words(pdf_bytes, key))
+    except Exception:
+        return None
